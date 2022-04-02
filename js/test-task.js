@@ -1,108 +1,80 @@
-// const chooseOptimalDistance = (t, k, ls) => {
-//     if (t < 0 || k < 1 || ls.length < k) {
-//         return null
-//     };
-
-//     // В данных примерах не обязательно, но в случае передачи 
-//     // несортированного массива - маст хев)
-//     const sortedLs = [...ls].sort();
-    
-//     let max = 0;
-    
-//     for (let first = 0; first < sortedLs.length - 2; first += 1) {
-//         let second = first + 1;
-//         let third = sortedLs.length - 1;
-
-//         while (second < third) {
-//             const sum = sortedLs[first] + sortedLs[second] + sortedLs[third];
-
-//             if (sum === t) {
-//                 max = sum;
-//                 break;
-//             } else if (sum > t) {
-//                 third -= 1;
-//             } else {
-//                 second += 1;
-                
-//                 if (sum > max) {
-//                     max = sum;
-//                 }
-//             }
-//         }
-//     }
-    
-//     return max;
-// }
-
 const chooseOptimalDistance = (t, k, ls) => {
-    if (t < 0 || k < 1 || ls.length < k) {
-        return null
-    };
+    if (!inputsCheck(t, k, ls)) {
+        console.log('заданы некорректные данные');
+        return null;
+    }    
 
-    const blank = makeBlank(ls);
-    const variants = makeVariants(blank);
-    console.log(variants);
+    const routes = makeRoutes(makeBlank(ls));
 
-    const sumArr = variants
-        .map(el => el.reduce((sum,item)=>sum+item),0)
-        .filter(el => el <= t);
-    const maxRouteLength = Math.max(...sumArr);
+    const maxRouteLength = routes.reduce((max, { length }) => (
+        length > max && length <= t ? length : max
+    ),0);
 
+    // ф-я для перевірки ввідних даних
+    function inputsCheck(t, k, ls) {
+        let result = true;
+
+        if (t < 0 || k < 1 || !Array.isArray(ls) || ls.length === 0) {
+            result = false;
+        };
+
+        if (ls.some(el => isNaN(el) || (el % 1 !== 0) || el < 0)) { 
+            result = false;
+        }
+
+        return result;
+    }
+
+    // ф-я для підготовки даних щодо маршрутів для подальшого опрацювання
     function  makeBlank(ls) { 
         return ls.reduce((acc, el, i, arr) => {
             const targetIdx = arr.length - 1 - (k-1);
 
             if (i <= targetIdx) {
-                return [...acc, [el, arr.slice(i + 1)]];
+                acc.push([el, arr.slice(i + 1)]);
             }
 
             return acc;
         }, []);
     }
 
-    function makeVariants(arr) {
-        const variants = arr.reduce((acc, el) => {
-
-            const firstSubElemsArr = el.slice(0, el.length - 1);
-            let lastSubEl = el[el.length - 1];
-
-            if (firstSubElemsArr.length === k) { 
-                acc.push(firstSubElemsArr);
+    // ф-я для створення масиву об'єктів маршрутів (маршрут, протяжність) 
+    function makeRoutes(arr) {
+        const routes = arr.reduce((acc, el) => {
+            
+            if (el.toString() === '[object Object]') { 
+                acc.push(el);
                 return acc;
             }
-            
-            while (lastSubEl.length !==0 ) {
-                const [first, ...other] = lastSubEl;
-                lastSubEl = other;
+                
+            const firstSubElemsArr = el.slice(0, el.length - 1);
+            let lastSubElArr = el[el.length - 1];
 
-                if (firstSubElemsArr.length + 1 === k) {
-                    acc.push([...firstSubElemsArr, first]);
-                } else { 
-                    acc.push([...firstSubElemsArr, first, other]);
-                }                    
+            if (firstSubElemsArr.length === k) {
+                const routeObj = {
+                    route: firstSubElemsArr,
+                    length: firstSubElemsArr.reduce((sum, el) => sum + el)
+                };
+                acc.push(routeObj);
+                return acc;
             }
-            
+
+            while (lastSubElArr.length !== 0) {
+                const [firstEl, ...other] = lastSubElArr;
+                acc.push([...firstSubElemsArr, firstEl, other]);
+                lastSubElArr = other;
+            }
+
             return acc;
         }, []);
 
-        const isAllDone = variants.every(el => !Array.isArray(el[el.length - 1]));
+        const isFinish = routes.every(el => el.toString() === '[object Object]');
 
-        if (!isAllDone) {
-            return makeVariants(variants);
-        }
-        
-        return variants;
+        return isFinish ? routes : makeRoutes(routes);
     };
 
-    return maxRouteLength;
+    return maxRouteLength !== 0 ? maxRouteLength : null;
 }
 
-
-
-
-// console.log(chooseOptimalDistance(174, 3, [51, 56, 58, 59, 61])); //173
-// console.log(chooseOptimalDistance(174, 3, [59, 61,56, 51, 58 ])); //173
-// console.log(chooseOptimalDistance(163, 3, [50])); // null
-
-console.log(chooseOptimalDistance(174, 3, [51, 56, 58, 59, 61, 65, 70])); 
-console.log(chooseOptimalDistance(250, 5, [51, 56, 58, 59, 61, 65, 70, 35, 56,78, 100 ])); //173
+console.log(chooseOptimalDistance(174, 3, [51, 56, 58, 59, 61])); //173
+console.log(chooseOptimalDistance(163, 3, [50])); // null
